@@ -1,0 +1,15 @@
+[package]
+name = "suitcase"
+version = "0.1.0"
+edition = "2021"
+default-run = "suitcase"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.69"
+chrono = "0.4.24"
+clap = { version = "4.1.8", features = ["derive"] }
+colored = "2.0.0"
+spinners = "4.1.0"
+thiserror = "1.0.39"
