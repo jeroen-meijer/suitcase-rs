@@ -1,7 +1,10 @@
-use crate::{args, exec_on, internal::shell::Shell, progress};
+use crate::{
+    args, exec_on,
+    internal::shell::{Shell, ShellError},
+};
 use anyhow::Context;
 use clap::Args;
-use std::{fs, path::Path};
+use std::path::Path;
 use thiserror::Error;
 
 #[derive(Args)]
@@ -34,51 +37,46 @@ pub fn git_hub_open(shell: &Shell, options: &GitHubOpenOptions) -> anyhow::Resul
         .into());
     }
 
-    let is_git_dir = progress!(
-        "Checking current git folder...",
-        exec_on!(shell, "git", "-C", path_str, "rev-parse", "--git-dir")
-    )
-    .map(|output| output.trim() == "true")
-    .context("checking whether current dir is a git repository")?;
+    let is_git_dir = exec_on!(shell, "git", "-C", path_str, "rev-parse", "--git-dir")
+        .map_or_else(
+            |err| match err {
+                ShellError::HostProcessExecutionFailure {
+                    command: _,
+                    args: _,
+                    status,
+                    stdout: _,
+                    stderr: _,
+                } if status.code() == Some(128) => Ok(false),
+                _ => Err(err),
+            },
+            |output| Ok(!output.trim().is_empty()),
+        )
+        .context("checking whether current dir is a git repository")?;
 
     if !is_git_dir {
-        let current_dir = fs::canonicalize(std::env::current_dir().unwrap()).unwrap();
-        if path != current_dir {
-            return Err(GitHubOpenError::PathNotAGitRepository { path: path_str }.into());
-        } else {
-            return Err(GitHubOpenError::PathNotAGitRepository { path: path_str }.into());
-        }
+        return Err(GitHubOpenError::PathNotAGitRepository { path: path_str }.into());
     }
 
-    let remote_branches = progress!(
-        "Getting remote branches...",
-        exec_on!(shell, "git", "-C", path_str, "branch", "-r")
-    )
-    .map(|output| output.trim().to_string())?;
+    let remote_branches = exec_on!(shell, "git", "-C", path_str, "branch", "-r")
+        .map(|output| output.trim().to_string())?;
 
     if remote_branches.is_empty() {
         return Err(GitHubOpenError::NoRemotesConfigured { path: path_str }.into());
     }
 
-    let remote_url = progress!(
-        "Getting remote url...",
-        exec_on!(
-            shell,
-            "git",
-            "-C",
-            path_str,
-            "config",
-            "--get",
-            "remote.origin.url"
-        )
+    let remote_url = exec_on!(
+        shell,
+        "git",
+        "-C",
+        path_str,
+        "config",
+        "--get",
+        "remote.origin.url"
     )
     .map(|output| output.trim().to_string())
     .context("trying to fetch the remote url")?;
 
-    progress!(
-        "Opening GitHub repository...",
-        exec_on!(shell, "open", remote_url)
-    )?;
+    exec_on!(shell, "open", remote_url)?;
 
     Ok(())
 }

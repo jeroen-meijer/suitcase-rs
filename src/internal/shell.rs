@@ -1,4 +1,4 @@
-use anyhow::Context;
+use std::process::ExitStatus;
 use thiserror::Error;
 
 /// An abstraction around a shell that can run commands on the host system.
@@ -29,7 +29,7 @@ impl Shell {
             Err(ShellError::HostProcessExecutionFailure {
                 command: cmd,
                 args: args.join(" "),
-                status: output.status.to_string(),
+                status: output.status,
                 stdout: String::from_utf8(output.stdout).unwrap(),
                 stderr: String::from_utf8(output.stderr).unwrap(),
             })
@@ -43,7 +43,7 @@ pub enum ShellError {
     HostProcessExecutionFailure {
         command: String,
         args: String,
-        status: String,
+        status: ExitStatus,
         stdout: String,
         stderr: String,
     },
