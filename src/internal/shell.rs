@@ -1,3 +1,4 @@
+use log::debug;
 use std::process::ExitStatus;
 use thiserror::Error;
 
@@ -12,6 +13,8 @@ impl Shell {
 
     /// Runs the given command with the given args (if any) and returns the result.
     pub fn run_command(&self, cmd: String, args: Vec<String>) -> Result<String, ShellError> {
+        debug!("running command: {} {}", cmd, args.join(" "));
+
         let res = std::process::Command::new(&cmd).args(&args).output();
         if let Err(err) = res {
             return Err(ShellError::ShellStartFailure {
@@ -22,6 +25,16 @@ impl Shell {
             .into());
         }
         let output = res.unwrap();
+
+        debug!("command status: {}", output.status);
+        debug!(
+            "command output: {}",
+            if output.stdout.is_empty() {
+                "<NO OUTPUT>".into()
+            } else {
+                format!("\n{}", String::from_utf8(output.stdout.clone()).unwrap())
+            }
+        );
 
         if output.status.success() {
             Ok(String::from_utf8(output.stdout).unwrap())
@@ -39,7 +52,7 @@ impl Shell {
 
 #[derive(Error, Debug)]
 pub enum ShellError {
-    #[error("failed to execute command (ran: '{command} {args}', got status: {status})")]
+    #[error("failed to execute command (ran: '{command} {args}', got status: {status}, stdout: '{stdout}', stderr: '{stderr}')")]
     HostProcessExecutionFailure {
         command: String,
         args: String,
@@ -89,6 +102,6 @@ macro_rules! exec_on {
         $shell.run_command($cmd.to_string(), vec![])
     };
     ($shell:expr, $cmd:expr, $($arg:expr),*) => {
-        $shell.run_command($cmd.to_string(), args![$($arg),*])
+        $shell.run_command($cmd.to_string(), $crate::args![$($arg),*])
     };
 }

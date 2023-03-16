@@ -1,11 +1,10 @@
-use crate::{
-    args, exec_on,
-    internal::shell::{Shell, ShellError},
-};
+use crate::{exec_on, internal::shell::ShellError};
 use anyhow::Context;
 use clap::Args;
 use std::path::Path;
 use thiserror::Error;
+
+use super::InternalCommandOptions;
 
 #[derive(Args)]
 pub struct GitHubOpenOptions {
@@ -26,7 +25,13 @@ pub enum GitHubOpenError {
     NoRemotesConfigured { path: String },
 }
 
-pub fn git_hub_open(shell: &Shell, options: &GitHubOpenOptions) -> anyhow::Result<()> {
+pub fn git_hub_open(
+    InternalCommandOptions {
+        shell,
+        base_args: _,
+        options,
+    }: InternalCommandOptions<GitHubOpenOptions>,
+) -> anyhow::Result<()> {
     let path = Path::new(&options.path);
     let path_str = path.to_string_lossy().to_string();
 
