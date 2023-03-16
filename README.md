@@ -11,7 +11,7 @@ A set of personal CLI tools to automate common tasks in software development (in
 ### Cargo
 
 ```bash
-$ cargo install --git https://github.com/jeroen-meijer/suitcase-rs.git
+$ cargo install suitcase
 ```
 
 ### Manual
@@ -29,8 +29,9 @@ This is a list of all commands that are currently available or planned to be imp
 | Command           | Full Name   | Description                                                                                                          | Example                 | Status         |
 | ----------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------- | -------------- |
 | `suitcase`        | Suitcase    | The main command. Use this to spawn any subcommands.                                                                 | `suitcase <SUBCOMMAND>` | ✅ Implemented |
+| `suitcase help`   | Help        | Show a list of all commands or detailed help for a specific command.                                                 | `suitcase help`         | ✅ Implemented |
 | `suitcase update` | Update      | Update the Suitcase CLI to the latest version (either from a local path or crates.io).                               | `suitcase update`       | ✅ Implemented |
-| `gho`             | GitHub Open | Open the current Git repository in the default browser (supports GitHub, GitLab, and any other Git hosting service). | `gho <PATH>`            | 🚧 In progress |
+| `gho <PATH>`      | GitHub Open | Open the current Git repository in the default browser (supports GitHub, GitLab, and any other Git hosting service). | `gho ./`                | ✅ Implemented |
 
 ## License
 
