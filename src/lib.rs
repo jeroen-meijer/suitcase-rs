@@ -18,12 +18,25 @@ pub fn run(args: Option<Vec<OsString>>) -> anyhow::Result<()> {
     let shell = &shell::Shell::new();
     let base_args = &cli.base_args;
 
-    let log_level = if base_args.verbose {
-        log::LevelFilter::Debug
-    } else {
-        log::LevelFilter::Info
+    if base_args.quiet && base_args.verbose {
+        return Err(anyhow::anyhow!(
+            "--quiet and --verbose cannot be used together"
+        ));
+    }
+
+    let log_level = match (base_args.quiet, base_args.verbose) {
+        (true, _) => log::LevelFilter::Off,
+        (_, true) => log::LevelFilter::Trace,
+        _ => log::LevelFilter::Info,
     };
-    env_logger::builder().filter_level(log_level).init();
+
+    env_logger::builder()
+        .filter_level(log_level)
+        .format_timestamp(None)
+        .format_module_path(false)
+        .format_target(false)
+        .format_indent(None)
+        .init();
 
     debug!("{} v{}", PACKAGE_NAME, PACKAGE_VERSION);
     debug!("verbose mode enabled");
@@ -36,19 +49,27 @@ pub fn run(args: Option<Vec<OsString>>) -> anyhow::Result<()> {
             options,
         })
         .context("trying to open git repository"),
-        Command::Update => commands::update(InternalCommandOptions {
+        Command::Upgrade => commands::upgrade(InternalCommandOptions {
             shell,
             base_args,
             options: &(),
         })
-        .context(format!("trying to update {}", PACKAGE_NAME)),
+        .context(format!("trying to upgrade {}", PACKAGE_NAME)),
+        Command::ForEveryDartProject(options) => {
+            commands::for_every_dart_project(InternalCommandOptions {
+                shell,
+                base_args,
+                options,
+            })
+            .context("trying to run a command for every Dart project")
+        }
     };
 }
 
 /// Called by aliases in the `src/bin` directory to run the CLI.
 ///
 /// Every alias in the `src/bin` directory is a shortcut to a subcommand
-/// (except for `update` which is a special case).
+/// (except for `upgrade` which is a special case).
 /// This function will parse the file path of the alias and use it to
 /// extract the subcommand name. It will then pass the subcommand name
 /// as an argument to the `run` function, as well as any other arguments

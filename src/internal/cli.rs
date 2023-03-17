@@ -26,19 +26,27 @@ pub enum Command {
     #[clap(name = "gho")]
     GitHubOpen(internal::commands::gho::GitHubOpenOptions),
 
-    /// Update suitcase to the latest version from GitHub.
+    /// Upgrade suitcase to the latest version from cargo or from a local path.
     ///
     /// This command will download and install the latest version of suitcase
-    /// from the GitHub repository (https://github.com/jeroen-meijer/suitcase-rs)
-    /// using `cargo install`.
-    #[clap(name = "update")]
-    Update,
+    /// from crates.io, or from a local path if it was installed from source.
+    #[clap(name = "upgrade")]
+    Upgrade,
+
+    /// Run the given command for every Dart project in the current directory
+    /// and its subdirectories recursively.
+    #[clap(name = "ford")]
+    ForEveryDartProject(internal::commands::ford::ForEveryDartProjectOptions),
 }
 
 /// Base arguments that are shared across all subcommands.
 #[derive(Clone, Args)]
 pub struct BaseArgs {
-    /// Print verbose output.
+    /// Print verbose output. Cannot be used in combination with `--quiet`.
     #[clap(short, long, global = true)]
     pub verbose: bool,
+
+    /// Print no output. Cannot be used in combination with `--verbose`.
+    #[clap(short, long, global = true)]
+    pub quiet: bool,
 }

@@ -1,8 +1,10 @@
+pub mod ford;
 pub mod gho;
-pub mod update;
+pub mod upgrade;
 
+pub use ford::*;
 pub use gho::*;
-pub use update::*;
+pub use upgrade::*;
 
 use super::{cli::BaseArgs, shell::Shell};
 

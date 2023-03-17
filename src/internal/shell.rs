@@ -11,46 +11,76 @@ impl Shell {
         Self {}
     }
 
-    /// Runs the given command with the given args (if any) and returns the result.
-    pub fn run_command(&self, cmd: String, args: Vec<String>) -> Result<String, ShellError> {
+    /// Indents the given string by the given number of spaces.
+    fn indent(spaces: usize, string: &str) -> String {
+        let indent = " ".repeat(spaces);
+        string
+            .lines()
+            .map(|line| format!("{}{}", indent, line))
+            .collect::<Vec<_>>()
+            .join("\r")
+    }
+
+    /// Run the given command with the given args (if any) and returns the result.
+    pub fn run_command(
+        &self,
+        cmd: String,
+        args: Vec<String>,
+        // An optional callback that will receive lines of stdout as they are produced.
+    ) -> Result<ShellOutput, ShellError> {
         debug!("running command: {} {}", cmd, args.join(" "));
 
-        let res = std::process::Command::new(&cmd).args(&args).output();
-        if let Err(err) = res {
-            return Err(ShellError::ShellStartFailure {
-                command: cmd,
+        let output = std::process::Command::new(&cmd)
+            .args(&args)
+            .output()
+            .map_err(|err| ShellError::ShellStartFailure {
+                command: cmd.clone(),
                 args: args.join(" "),
                 error: err.to_string(),
-            }
-            .into());
-        }
-        let output = res.unwrap();
+            })?;
+
+        let output = ShellOutput {
+            status: output.status,
+            stdout: String::from_utf8(output.stdout).unwrap(),
+            stderr: String::from_utf8(output.stderr).unwrap(),
+        };
 
         debug!("command status: {}", output.status);
         debug!(
-            "command output: {}",
+            "command output:\n  stdout:\n{}\n\n  stderr:\n{}",
             if output.stdout.is_empty() {
-                "<NO OUTPUT>".into()
+                Shell::indent(4, "<NO STDOUT OUTPUT>").into()
             } else {
-                format!("\n{}", String::from_utf8(output.stdout.clone()).unwrap())
+                format!("\n{}", Shell::indent(4, &output.stdout))
+            },
+            if output.stderr.is_empty() {
+                Shell::indent(4, "<NO STDERR OUTPUT>").into()
+            } else {
+                format!("\n{}", Shell::indent(4, &output.stderr))
             }
         );
 
         if output.status.success() {
-            Ok(String::from_utf8(output.stdout).unwrap())
+            Ok(output)
         } else {
             Err(ShellError::HostProcessExecutionFailure {
                 command: cmd,
                 args: args.join(" "),
                 status: output.status,
-                stdout: String::from_utf8(output.stdout).unwrap(),
-                stderr: String::from_utf8(output.stderr).unwrap(),
+                stdout: output.stdout,
+                stderr: output.stderr,
             })
         }
     }
 }
 
-#[derive(Error, Debug)]
+pub struct ShellOutput {
+    pub status: std::process::ExitStatus,
+    pub stdout: String,
+    pub stderr: String,
+}
+
+#[derive(Error, Debug, Clone)]
 pub enum ShellError {
     #[error("failed to execute command (ran: '{command} {args}', got status: {status}, stdout: '{stdout}', stderr: '{stderr}')")]
     HostProcessExecutionFailure {

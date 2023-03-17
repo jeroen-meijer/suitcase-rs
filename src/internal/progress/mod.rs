@@ -1,52 +1,61 @@
-use chrono::{Datelike, Timelike};
 use colored::Colorize;
 use spinners::{Spinner, Spinners};
 use std::time::Instant;
 
-pub struct Progress {
+pub struct Progress;
+
+impl Progress {
+    /// Constructs a new progress spinner with the given prompt.
+    ///
+    /// If the current logger is set to `off`, the spinner will not be displayed.
+    pub fn new(prompt: &str) -> Box<dyn ProgressInterface> {
+        if log::max_level() == log::LevelFilter::Off {
+            Box::new(SilentProgressImpl)
+        } else {
+            Box::new(VisibleProgressImpl::new(prompt))
+        }
+    }
+}
+
+pub trait ProgressInterface {
+    /// Stops the spinner and prints a success message.
+    fn success(&mut self);
+
+    /// Stops the spinner and prints a failure message.
+    fn fail(&mut self);
+}
+
+struct VisibleProgressImpl {
     prompt: String,
     start_time: Instant,
     spinner: Spinner,
 }
 
-impl Progress {
-    fn get_current_date_time_str() -> String {
-        let now = chrono::Local::now();
-        format!(
-            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
-            now.year(),
-            now.month(),
-            now.day(),
-            now.hour(),
-            now.minute(),
-            now.second()
-        )
-    }
-
-    pub fn new(prompt: &str) -> Self {
+impl VisibleProgressImpl {
+    fn new(prompt: &str) -> Self {
         let now = Instant::now();
 
-        let initial_prompt = format!("[{}] {}...", Self::get_current_date_time_str(), prompt);
+        let initial_prompt = format!("{}...", prompt).bold().to_string();
         Self {
             prompt: prompt.into(),
             start_time: now,
             spinner: Spinner::new(Spinners::Dots, initial_prompt),
         }
     }
+}
 
-    pub fn success(&mut self) {
-        let prompt = format!("[{}] {}", Self::get_current_date_time_str(), self.prompt);
-
+impl ProgressInterface for VisibleProgressImpl {
+    fn success(&mut self) {
         self.spinner.stop_with_message(format!(
             "{} {} (took {:.2}ms)",
             "✔".green(),
-            prompt,
+            self.prompt,
             self.start_time.elapsed().as_micros() / 1000
         ));
     }
 
-    pub fn fail(&mut self) {
-        let prompt = format!("[{}] {}", Self::get_current_date_time_str(), self.prompt).bold();
+    fn fail(&mut self) {
+        let prompt = self.prompt.bold();
 
         self.spinner.stop_with_message(format!(
             "{} {} (took {:.2}ms)",
@@ -55,6 +64,14 @@ impl Progress {
             self.start_time.elapsed().as_micros() / 1000
         ));
     }
+}
+
+struct SilentProgressImpl;
+
+impl ProgressInterface for SilentProgressImpl {
+    fn success(&mut self) {}
+
+    fn fail(&mut self) {}
 }
 
 /// A macro that wraps a function in a progress spinner.
