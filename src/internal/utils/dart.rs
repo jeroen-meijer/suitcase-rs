@@ -3,6 +3,19 @@ use anyhow::Context;
 use log::debug;
 use std::{env, path::PathBuf};
 
+const IGNORED_FOLDERS: [&str; 10] = [
+    "ios",
+    "android",
+    "windows",
+    "linux",
+    "macos",
+    ".symlinks",
+    ".plugin_symlinks",
+    ".dart_tool",
+    "build",
+    ".fvm",
+];
+
 pub struct DartShell<'a> {
     shell: &'a Shell,
 }
@@ -48,6 +61,19 @@ impl<'a> DartShell<'a> {
             .lines()
             .map(|line| PathBuf::try_from(line.trim()))
             .filter_map(Result::ok)
+            .map(|path| path.canonicalize())
+            .filter_map(Result::ok)
+            .filter(|path| {
+                let Some(last_component) = path.components().last() else {
+                    return true;
+                };
+
+                let Some(dir_name) = last_component.as_os_str().to_str() else {
+                    return true;
+                };
+
+                !IGNORED_FOLDERS.contains(&dir_name)
+            })
             .map(|path| self.get_dart_project_metadata(path))
             .collect::<Result<Vec<_>, _>>()?;
 

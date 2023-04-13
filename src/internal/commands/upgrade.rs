@@ -1,19 +1,31 @@
 use std::str::FromStr;
 
 use anyhow::Context;
-use log::{debug, info};
+use clap::Args;
+use log::{debug, error, info};
 
 use crate::{exec_on, internal::constants::PACKAGE_NAME, progress};
 
 use super::InternalCommandOptions;
 
+#[derive(Args, Debug)]
+pub struct UpgradeOptions {
+    /// Whether to run cargo in offline mode.
+    #[arg(default_value = "false", short, long)]
+    offline: bool,
+}
+
 pub fn upgrade(
     InternalCommandOptions {
         shell,
         base_args: _,
-        options: _,
-    }: InternalCommandOptions<()>,
+        options,
+    }: InternalCommandOptions<UpgradeOptions>,
 ) -> anyhow::Result<()> {
+    if options.offline {
+        info!("Running cargo in offline mode");
+    }
+
     let installed_packages_str = progress!(
         "Getting cargo packages...",
         exec_on!(shell, "cargo", "install", "--list")
@@ -38,14 +50,14 @@ pub fn upgrade(
     let Some(this_package) = installed_packages
     .iter()
     .find(|package| package.name == PACKAGE_NAME) else {
-        return Err(anyhow::anyhow!(
+        anyhow::bail!(
             "could not find {} package in installed packages (all packages: {:?})",
             PACKAGE_NAME,
             installed_packages
                 .iter()
                 .map(|package| package.name.as_str())
                 .collect::<Vec<_>>()
-        ));
+        );
     };
 
     debug!(
@@ -58,12 +70,29 @@ pub fn upgrade(
     let output = if let Some(path) = &this_package.path {
         progress!(
             format!("Upgrading suitcase from local path ({})...", path).as_str(),
-            exec_on!(shell, "cargo", "install", "--force", "--path", path)
+            if options.offline {
+                exec_on!(
+                    shell,
+                    "cargo",
+                    "install",
+                    "--offline",
+                    "--force",
+                    "--path",
+                    path
+                )
+            } else {
+                exec_on!(shell, "cargo", "install", "--force", "--path", path)
+            }
         )
         .context(format!(
             "trying to upgrade suitcase from local path ({})",
             path
         ))?
+    } else if options.offline {
+        error!("Cannot upgrade suitcase in offline mode if it was not installed from a local path");
+        anyhow::bail!(
+            "Cannot upgrade suitcase in offline mode if it was not installed from a local path"
+        );
     } else {
         progress!(
             "Upgrading suitcase from crates.io...",

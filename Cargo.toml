@@ -1,7 +1,7 @@
 [package]
 name = "suitcase"
 description = "A set of personal CLI tools to automate common tasks in software development (including Rust, Dart, and Flutter), written in Rust."
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 repository = "https://github.com/jeroen-meijer/suitcase-rs"
 categories = ["command-line-utilities"]

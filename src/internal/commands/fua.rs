@@ -18,18 +18,18 @@ use thiserror::Error;
 use super::InternalCommandOptions;
 
 #[derive(Args, Debug)]
-pub struct ForEveryDartProjectOptions {
+pub struct FvmUseForEveryFlutterProjectOptions {
     /// The command to run on each Dart project.
     #[arg()]
-    command: Vec<String>,
+    version: String,
 
     /// The path from which to search for Dart projects.
     #[arg(default_value = ".", short, long)]
     path: PathBuf,
 
-    /// Include Flutter projects when searching for Dart projects to run the command on.
-    #[arg(default_value = "true", short, long)]
-    include_flutter_projects: bool,
+    /// Whether to force FVM to set the version for every Dart project (even non-Flutter projects).
+    #[arg(default_value = "false", short, long)]
+    include_dart_projects: bool,
 
     /// Exit the process immediately if any of the commands run on the Dart projects fail.
     #[arg(default_value = "false", short, long)]
@@ -41,7 +41,7 @@ pub struct ForEveryDartProjectOptions {
 }
 
 #[derive(Error, Debug)]
-pub enum ForEveryDartProjectError {
+pub enum FvmUseForEveryFlutterProjectError {
     /// An error that occurred when trying to execute a command in one or more Dart projects.
     #[error("error while executing command '{command}' for one or more projects: {errors:?}")]
     CommandExecutionError {
@@ -50,14 +50,13 @@ pub enum ForEveryDartProjectError {
     },
 }
 
-pub fn for_every_dart_project(
+pub fn fvm_use_for_every_flutter_project(
     InternalCommandOptions {
         shell,
         base_args: _,
         options,
-    }: InternalCommandOptions<ForEveryDartProjectOptions>,
+    }: InternalCommandOptions<FvmUseForEveryFlutterProjectOptions>,
 ) -> anyhow::Result<()> {
-    let command = options.command.join(" ");
     let path = options.path.clone();
     let mut dir_utils = DirectoryUtils::new();
 
@@ -74,9 +73,9 @@ pub fn for_every_dart_project(
         ))
     })?;
 
-    if !options.include_flutter_projects {
-        projects.retain(|project| !project.is_flutter_project);
-        info!("Found {} Dart (non-Flutter) projects", projects.len());
+    if !options.include_dart_projects {
+        projects.retain(|project| project.is_flutter_project);
+        info!("Found {} Flutter projects", projects.len());
     } else {
         info!("Found {} Dart and Flutter projects", projects.len());
     }
@@ -88,6 +87,41 @@ pub fn for_every_dart_project(
 
     let mut errors: Vec<(&DartProjectMetadata, ShellError)> = vec![];
 
+    progress!(
+        format!(
+            "Ensuring Flutter version '{}' is installed",
+            options.version
+        )
+        .as_str(),
+        {
+            exec_on!(
+                shell,
+                "bash",
+                "-c",
+                format!("fvm install {}", options.version).as_str()
+            )
+        }
+    )
+    .context(format!(
+        "trying to install Flutter version '{}' using FVM",
+        options.version
+    ))?;
+
+    let command = {
+        let mut command_parts = vec!["fvm", "use", options.version.as_str()];
+        if options.include_dart_projects {
+            command_parts.push("--force");
+        }
+
+        command_parts.join(" ")
+    };
+
+    info!(
+        "Running command '{}' in {} projects...",
+        command,
+        projects.len()
+    );
+
     for project in projects.iter() {
         dir_utils.pushd(&project.path).context(format!(
             "trying to navigate to project path '{}'",
@@ -96,7 +130,7 @@ pub fn for_every_dart_project(
 
         let result = progress!(
             format!(
-                "Running command in '{}' ('{}')",
+                "Setting FVM version in '{}' ('{}')",
                 project.name,
                 project.path.display()
             )
@@ -140,7 +174,7 @@ pub fn for_every_dart_project(
     }
 
     if !errors.is_empty() {
-        return Err(ForEveryDartProjectError::CommandExecutionError {
+        return Err(FvmUseForEveryFlutterProjectError::CommandExecutionError {
             command,
             errors: errors
                 .into_iter()

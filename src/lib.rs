@@ -19,9 +19,7 @@ pub fn run(args: Option<Vec<OsString>>) -> anyhow::Result<()> {
     let base_args = &cli.base_args;
 
     if base_args.quiet && base_args.verbose {
-        return Err(anyhow::anyhow!(
-            "--quiet and --verbose cannot be used together"
-        ));
+        anyhow::bail!("--quiet and --verbose cannot be used together");
     }
 
     let log_level = match (base_args.quiet, base_args.verbose) {
@@ -49,10 +47,10 @@ pub fn run(args: Option<Vec<OsString>>) -> anyhow::Result<()> {
             options,
         })
         .context("trying to open git repository"),
-        Command::Upgrade => commands::upgrade(InternalCommandOptions {
+        Command::Upgrade(options) => commands::upgrade(InternalCommandOptions {
             shell,
             base_args,
-            options: &(),
+            options,
         })
         .context(format!("trying to upgrade {}", PACKAGE_NAME)),
         Command::ForEveryDartProject(options) => {
@@ -62,6 +60,14 @@ pub fn run(args: Option<Vec<OsString>>) -> anyhow::Result<()> {
                 options,
             })
             .context("trying to run a command for every Dart project")
+        }
+        Command::FvmUseForEveryFlutterProject(options) => {
+            commands::fvm_use_for_every_flutter_project(InternalCommandOptions {
+                shell,
+                base_args,
+                options,
+            })
+            .context("trying to set an FVM version for every Flutter project")
         }
     };
 }
