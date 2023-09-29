@@ -12,7 +12,7 @@ use crate::{
 use anyhow::Context;
 use clap::Args;
 use log::info;
-use std::{ops::Deref, path::PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 
 use super::InternalCommandOptions;
@@ -105,7 +105,7 @@ pub fn for_every_dart_project(
         );
 
         if let Err(error) = &result {
-            let error = error.deref().clone();
+            let error = error.clone();
             if options.fail_fast {
                 return Err(error).context(format!(
                     "trying to run command '{}' on project '{}'",
