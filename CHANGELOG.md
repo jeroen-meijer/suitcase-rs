@@ -1,3 +1,7 @@
+## 0.1.4 (2023-09-29)
+
+- fix: ignore more special directories (such as `flutter_gen`) when running commands that run for every Dart/Flutter project (like `ford` and `fua`)
+
 ## 0.1.3 (2023-04-13)
 
 - feat: add `fua` command

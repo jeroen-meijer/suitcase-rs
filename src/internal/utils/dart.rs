@@ -3,7 +3,7 @@ use anyhow::Context;
 use log::debug;
 use std::{env, path::PathBuf};
 
-const IGNORED_FOLDERS: [&str; 10] = [
+const IGNORED_FOLDERS: [&str; 12] = [
     "ios",
     "android",
     "windows",
@@ -14,6 +14,8 @@ const IGNORED_FOLDERS: [&str; 10] = [
     ".dart_tool",
     "build",
     ".fvm",
+    "flutter_sdk",
+    "flutter_gen",
 ];
 
 pub struct DartShell<'a> {
