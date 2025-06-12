@@ -83,6 +83,7 @@ impl ProgressInterface for SilentProgressImpl {
 ///
 /// # Examples
 /// ```no_run
+/// use suitcase::progress;
 /// let num = progress!("get number", get_number());
 ///
 /// fn get_number() -> Result<i32, ()> {

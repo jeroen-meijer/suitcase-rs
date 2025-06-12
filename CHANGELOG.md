@@ -1,3 +1,11 @@
+## 0.1.5 (2024-07-15)
+
+- chore: Updated Rust to the latest stable version.
+- chore: Updated all dependencies to their latest versions, including major incompatible ones.
+- fix: Resolved doc test failures for `progress!` and `exec_on!` macros caused by missing imports after dependency updates.
+- fix: Addressed warnings related to redundant `.deref()` calls that appeared after dependency updates.
+- fix: Removed unused `Deref` imports after fixing the aforementioned warnings.
+
 ## 0.1.4 (2023-09-29)
 
 - fix: ignore more special directories (such as `flutter_gen`) when running commands that run for every Dart/Flutter project (like `ford` and `fua`)

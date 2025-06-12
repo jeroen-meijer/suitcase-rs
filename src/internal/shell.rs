@@ -121,10 +121,11 @@ macro_rules! args {
 ///
 /// # Examples
 /// ```no_run
+/// use suitcase::exec_on;
 /// let shell = suitcase::internal::shell::Shell::new();
 ///
-/// let result = exec_on!(shell, "echo", "hello world").unwrap();
-/// assert_eq!(result, "hello world\n");
+/// let result = exec_on!(shell, "echo", "hello world");
+/// assert_eq!(result.unwrap().stdout, "hello world\n");
 /// ```
 #[macro_export]
 macro_rules! exec_on {
